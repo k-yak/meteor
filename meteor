@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.82
+BUNDLE_VERSION=0.2.23
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -22,9 +22,9 @@ if [ "$UNAME" = "Darwin" ] ; then
 elif [ "$UNAME" = "Linux" ] ; then
     ARCH="$(uname -m)"
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
-        echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports i686 and x86_64 for now."
-        exit 1
+        echo "Officialy : Unsupported architecture: $ARCH"
+        echo "Officialy : Meteor only supports i686 and x86_64 for now."
+        echo "install with k-yak version"
     fi
 fi
 PLATFORM="${UNAME}_${ARCH}"
