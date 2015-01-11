@@ -157,10 +157,10 @@ cp -r /opt/mongo ./mongodb
 # don't ship a number of mongo binaries. they are big and unused. these
 # could be deleted from git dev_bundle but not sure which we'll end up
 # needing.
-cd mongodb/bin
+#cd mongodb/bin
 #removed mongosniff from the list because it's not in my build of 2.1.1 and trying to remove it crashes the script
-rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongostat mongotop mongooplog mongoperf
-cd ../..
+#rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongostat mongotop mongooplog mongoperf
+#cd ../..
 
 
 echo BUNDLING
