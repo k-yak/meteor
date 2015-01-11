@@ -1,4 +1,4 @@
-# Meteor
+# Meteor for raspberry
 
 Meteor is an ultra-simple environment for building modern web
 applications.
@@ -12,10 +12,36 @@ With Meteor you write apps:
 Documentation is available at http://docs.meteor.com/
 
 ## Quick Start
+Install nodejs:
 
+    wget http://node-arm.herokuapp.com/node_latest_armhf.deb
+    sudo dpkg -i node_latest_armhf.deb
+    
+Install mongoDb:
+
+* tutorial from : http://raspbian-france.fr/installer-mongodb-raspberry-pi/ (french)
+
+    sudo -s
+    cd
+    wget http://raspbian-france.fr/download/mongodb-rpi_20140207.zip
+    adduser --firstuid 100 --ingroup nogroup --shell /etc/false --disabled-password --gecos "" --no-create-home mongodb
+    unzip mongodb-rpi_20140207.zip
+    cp -R mongodb-rpi/mongo /opt
+    chmod +x /opt/mongo/bin/*
+    mkdir /var/log/mongodb
+    chown mongodb:nogroup /var/log/mongodb
+    mkdir /var/lib/mongodb
+    chown mongodb:nogroup /var/lib/mongodb
+    cp mongodb-rpi/debian/init.d /etc/init.d/mongod
+    cp mongodb-rpi/debian/mongodb.conf /etc/
+    ln -s /opt/mongo/bin/mongod /usr/bin/mongod
+    chmod u+x /etc/init.d/mongod
+    update-rc.d mongod defaults /etc/init.d/mongod start
+    su pi
+    
 Install Meteor:
 
-    curl https://install.meteor.com | /bin/sh
+
 
 Create a project:
 
