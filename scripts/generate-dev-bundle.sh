@@ -25,9 +25,9 @@ elif [ "$UNAME" == "Darwin" ] ; then
     fi
 
     if [ "$ARCH" != "x86_64" ] ; then
-        echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports x86_64 for now."
-#        exit 1
+        echo "Officialy : Unsupported architecture: $ARCH"
+        echo "Officialy : Meteor only supports i686 and x86_64 for now."
+        echo "install with k-yak version"
     fi
 
     MONGO_OS="osx"
