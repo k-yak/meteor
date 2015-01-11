@@ -40,7 +40,7 @@ Install mongoDb:
     update-rc.d mongod defaults /etc/init.d/mongod start
     su pi
     
-## Slow Start (for developers)
+## Meteor install
 
 If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
@@ -51,7 +51,7 @@ can run Meteor directly from a git checkout.
 
 Now you can run meteor directly from the checkout 
 
-    ./meteor --help
+    ./meteor
 
 From your checkout, you can read the docs locally. The `/docs` directory is a
 meteor application, so simply change into the `/docs` directory and launch
