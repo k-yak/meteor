@@ -3,72 +3,77 @@
 set -e
 set -u
 
-# Read the bundle version from the meteor shell script.
-BUNDLE_VERSION=$(perl -ne 'print $1 if /BUNDLE_VERSION=(\S+)/' meteor)
-if [ -z "$BUNDLE_VERSION" ]; then
-    echo "BUNDLE_VERSION not found"
-    exit 1
+BUNDLE_VERSION=0.2.23
+UNAME=$(uname)
+ARCH=$(uname -m)
+
+if [ "$UNAME" == "Linux" ] ; then
+    if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+        echo "Unsupported architecture: $ARCH"
+        echo "Meteor only supports i686 and x86_64 for now."
+#        exit 1
+    fi
+    MONGO_OS="linux"
+
+elif [ "$UNAME" == "Darwin" ] ; then
+    SYSCTL_64BIT=$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)
+    if [ "$ARCH" == "i386" -a "1" != "$SYSCTL_64BIT" ] ; then
+        # some older macos returns i386 but can run 64 bit binaries.
+        # Probably should distribute binaries built on these machines,
+        # but it should be OK for users to run.
+        ARCH="x86_64"
+    fi
+
+    if [ "$ARCH" != "x86_64" ] ; then
+        echo "Unsupported architecture: $ARCH"
+        echo "Meteor only supports x86_64 for now."
+#        exit 1
+    fi
+
+    MONGO_OS="osx"
+else
+    echo "This OS not yet supported"
+#    exit 1
 fi
 
-source "$(dirname $0)/build-dev-bundle-common.sh"
-echo CHECKOUT DIR IS "$CHECKOUT_DIR"
-echo BUILDING DEV BUNDLE "$BUNDLE_VERSION" IN "$DIR"
 
-# ios-sim is used to run iPhone simulator from the command-line. Doesn't make
-# sense to build it for linux.
-if [ "$OS" == "osx" ]; then
-    # the build from source is not going to work on old OS X versions, until we
-    # upgrade our Mac OS X Jenkins machine, download the precompiled tarball
+# save off meteor checkout dir as final target
+cd `dirname $0`/..
+TARGET_DIR=`pwd`
 
-    # which rake # rake is required to build ios-sim
-    # git clone https://github.com/phonegap/ios-sim.git
-    # cd ios-sim
-    # git checkout 2.0.1
-    # rake build
-    # which build/Release/ios-sim # check that we have in fact got the binary
-    # mkdir -p "$DIR/lib/ios-sim"
-    # cp -r build/Release/* "$DIR/lib/ios-sim/"
+DIR=`mktemp -d -t generate-dev-bundle-XXXXXXXX`
+trap 'rm -rf "$DIR" >/dev/null 2>&1' 0
 
-    # Download the precompiled tarball
-    IOS_SIM_URL="http://android-bundle.s3.amazonaws.com/ios-sim.tgz"
-    curl "$IOS_SIM_URL" | tar xfz -
-    mkdir -p "$DIR/lib/ios-sim"
-    cp -r ios-sim/ios-sim "$DIR/lib/ios-sim"
-fi
+echo BUILDING IN "$DIR"
 
 cd "$DIR"
+chmod 755 .
+umask 022
+#mkdir build
+#cd build
 
-S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
+#git clone git://github.com/joyent/node.git
+#cd node
+# When upgrading node versions, also update the values of MIN_NODE_VERSION at
+# the top of app/meteor/meteor.js and app/server/server.js.
+#git checkout v0.8.18
 
-# Update these values after building the dev-bundle-node Jenkins project.
-NODE_BUILD_NUMBER=8
-NODE_VERSION=0.10.33
-NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
-if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
-    gzip -d <"${CHECKOUT_DIR}/${NODE_TGZ}" | tar x
-else
-    NODE_URL="http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
-    echo "Downloading Node from ${NODE_URL}"
-    curl "${NODE_URL}" | gzip -d | tar x
-fi
+#./configure --prefix="$DIR"
+#make -j4
+#make install PORTABLE=1
+# PORTABLE=1 is a node hack to make npm look relative to itself instead
+# of hard coding the PREFIX.
 
-# Update these values after building the dev-bundle-mongo Jenkins project.
-MONGO_BUILD_NUMBER=3
-MONGO_VERSION=2.4.12
-MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
-if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
-    gzip -d <"${CHECKOUT_DIR}/${MONGO_TGZ}" | tar x
-else
-    MONGO_URL="http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
-    echo "Downloading Mongo from ${MONGO_URL}"
-    curl "${MONGO_URL}" | gzip -d | tar x
-fi
-
-cd "$DIR/build"
+#downloading a pre-built copy of node for raspberrypi/arm
+wget https://gist.github.com/adammw/3245130/raw/b1c37526b15707b4b3a5c4bcff3d1002a4021378/v0.8.18/node-v0.8.18-linux-arm-armv6j-vfp-hard.tar.gz
+tar xzf node-v0.8.18-linux-arm-armv6j-vfp-hard.tar.gz --strip=1
+rm node-v0.8.18-linux-arm-armv6j-vfp-hard.tar.gz
 
 # export path so we use our new node for later builds
 export PATH="$DIR/bin:$PATH"
+
 which node
+
 which npm
 
 # When adding new node modules (or any software) to the dev bundle,
@@ -76,111 +81,94 @@ which npm
 # packages that these depend on, so watch out for new dependencies when
 # you update version numbers.
 
-# First, we install the modules that are dependencies of tools/server/boot.js:
-# the modules that users of 'meteor bundle' will also have to install. We save a
-# shrinkwrap file with it, too.  We do this in a separate place from
-# $DIR/server-lib/node_modules originally, because otherwise 'npm shrinkwrap'
-# will get confused by the pre-existing modules.
-mkdir "${DIR}/build/npm-server-install"
-cd "${DIR}/build/npm-server-install"
-node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" >package.json
-npm install
-npm shrinkwrap
+cd "$DIR/lib/node_modules"
+npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
+npm install optimist@0.3.5
+npm install coffee-script@1.5.0
+npm install less@1.3.3
+npm install stylus@0.30.1
+npm install nib@0.8.2
+npm install semver@1.1.0
+npm install handlebars@1.0.7
+npm install mongodb@1.2.13
+npm install clean-css@0.8.3
+npm install useragent@2.0.1
+npm install request@2.12.0
+npm install simplesmtp@0.1.25
+npm install stream-buffers@0.2.3
+npm install keypress@0.1.0
+npm install sockjs@0.3.4
+npm install http-proxy@0.8.5
+npm install underscore@1.4.2 # 1.4.4 is a performance regression
+npm install fstream@0.1.21
+npm install tar@0.1.14
+npm install websocket@1.0.8
+npm install kexec@0.1.1
+npm install shell-quote@0.0.1
 
-mkdir -p "${DIR}/server-lib/node_modules"
-# This ignores the stuff in node_modules/.bin, but that's OK.
-cp -R node_modules/* "${DIR}/server-lib/node_modules/"
+# allow clientMaxAge to be set to 0:
+# https://github.com/tomgco/gzippo/pull/49
+npm install https://github.com/meteor/gzippo/tarball/1e4b955439
 
-mkdir "${DIR}/etc"
-mv package.json npm-shrinkwrap.json "${DIR}/etc/"
+# uglify-js has a bug which drops 'undefined' in arrays:
+# https://github.com/mishoo/UglifyJS2/pull/97
+npm install https://github.com/meteor/UglifyJS2/tarball/aa5abd14d3
 
+# progress 0.1.0 has a regression where it opens stdin and thus does not
+# allow the node process to exit cleanly. See
+# https://github.com/visionmedia/node-progress/issues/19
+npm install progress@0.0.5
+
+# pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
+# which make the dev bundle much bigger. We need a better solution.
+npm install mailcomposer@0.1.15
+
+# If you update the version of fibers in the dev bundle, also update the "npm
+# install" command in docs/client/concepts.html and in the README in
+# app/lib/bundler.js.
+npm install fibers@1.0.0
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
-# bloats our dev bundle. Remove all the ones other than our
-# architecture. (Expression based on build.js in fibers source.)
-shrink_fibers () {
-    FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
-    mv $FIBERS_ARCH ..
-    rm -rf *
-    mv ../$FIBERS_ARCH .
-}
+# bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
+# thinking that the packages need to depend on both 32- and 64-bit versions of
+# libstd++. Remove all the ones other than our architecture. (Expression based
+# on build.js in fibers source.)
+FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
+cd fibers/bin
+mv $FIBERS_ARCH ..
+rm -rf *
+mv ../$FIBERS_ARCH .
+cd ../..
 
-cd "$DIR/server-lib/node_modules/fibers/bin"
-shrink_fibers
 
-# Now, install the npm modules which are the dependencies of the command-line
-# tool.
-mkdir "${DIR}/build/npm-tool-install"
-cd "${DIR}/build/npm-tool-install"
-node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
-npm install
-# Refactor node modules to top level and remove unnecessary duplicates.
-npm dedupe
-cp -R node_modules/* "${DIR}/lib/node_modules/"
+# Download and install mongodb.
+# To see the mongo changelog, go to http://www.mongodb.org/downloads,
+# click 'changelog' under the current version, then 'release notes' in
+# the upper right.
+cd "$DIR"
+#MONGO_VERSION="2.2.1"
+#MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
+#MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
+#curl "$MONGO_URL" | tar -xz
+#mv "$MONGO_NAME" mongodb
 
-cd "${DIR}/lib"
+#copied 2.1.1 version (mongopi) already installed on my system. Hope it is compatible.
+cp -r /opt/mongo ./mongodb
 
-# TODO Move this into dev-bundle-tool-package.js when it can be safely
-# installed that way (i.e. without build nan/runas build errors).
-# XXX This contains a patch to expose the errno from failed syscalls, so
-# we can better understand why some users can't use pathwatcher.
-# We have to install from the npm registry in order to get coffeescript
-# output.  The patch is https://github.com/atom/node-pathwatcher/pull/53
-npm install meteor-pathwatcher-tweaks@2.3.5
+# don't ship a number of mongo binaries. they are big and unused. these
+# could be deleted from git dev_bundle but not sure which we'll end up
+# needing.
+cd mongodb/bin
+#removed mongosniff from the list because it's not in my build of 2.1.1 and trying to remove it crashes the script
+rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongostat mongotop mongooplog mongoperf
+cd ../..
 
-# Clean up some bulky stuff.
-cd node_modules
-
-# Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
-# don't exist, because that might mean it moved somewhere else and we should
-# update the delete line.
-delete () {
-    if [ ! -e "$1" ]; then
-        echo "Missing (moved?): $1"
-        exit 1
-    fi
-    rm -rf "$1"
-}
-
-delete browserstack-webdriver/docs
-delete browserstack-webdriver/lib/test
-
-delete sqlite3/deps
-delete wordwrap/test
-
-# dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
-find . -path '*/esprima/test' | xargs rm -rf
-find . -path '*/esprima-fb/test' | xargs rm -rf
-
-# dedupe isn't good enough to eliminate 4 copies of JSONstream, sigh.
-find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
-
-# Not sure why dedupe doesn't lift these to the top.
-pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
-delete browserify-zlib/node_modules/pako/benchmark
-delete browserify-zlib/node_modules/pako/test
-delete buffer/perf
-delete crypto-browserify/test
-delete umd/node_modules/ruglify/test
-popd
-
-cd "$DIR/lib/node_modules/fibers/bin"
-shrink_fibers
-
-# Download BrowserStackLocal binary.
-BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
-
-cd "$DIR/build"
-curl -O $BROWSER_STACK_LOCAL_URL
-gunzip BrowserStackLocal*
-mv BrowserStackLocal* BrowserStackLocal
-mv BrowserStackLocal "$DIR/bin/"
 
 echo BUNDLING
 
 cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
-rm -rf build
+#rm -rf build
 
-tar czf "${CHECKOUT_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
+tar czf "${TARGET_DIR}/dev_bundle_${UNAME}_${ARCH}_${BUNDLE_VERSION}.tar.gz" .
 
 echo DONE
