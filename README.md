@@ -21,6 +21,7 @@ Install mongoDb:
 
 * tutorial from : http://raspbian-france.fr/installer-mongodb-raspberry-pi/ (french)
 
+Install:
 
     sudo -s
     cd
