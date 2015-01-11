@@ -11,7 +11,7 @@ With Meteor you write apps:
 
 Documentation is available at http://docs.meteor.com/
 
-## Quick Start
+## Prerequisites
 Install nodejs:
 
     wget http://node-arm.herokuapp.com/node_latest_armhf.deb
@@ -40,43 +40,16 @@ Install mongoDb:
     update-rc.d mongod defaults /etc/init.d/mongod start
     su pi
     
-Install Meteor:
-
-
-
-Create a project:
-
-    meteor create try-meteor
-
-Run it:
-
-    cd try-meteor
-    meteor
-
-Deploy it to the world, for free:
-
-    meteor deploy try-meteor.meteor.com
-
 ## Slow Start (for developers)
 
 If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
 
-    git clone git://github.com/meteor/meteor.git
+    git clone git://github.com/k-yak/meteor.git
     cd meteor
-
-If you're the sort of person who likes to build everything from scratch,
-you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
-with the provided script. This requires git, a C and C++ compiler,
-autotools, and scons. If you do not run this script, Meteor will
-automatically download pre-compiled binaries when you first run it.
-
-    # OPTIONAL
     ./scripts/generate-dev-bundle.sh
 
-Now you can run meteor directly from the checkout (if you did not
-build the dependency bundle above, this will take a few moments to
-download a pre-build version).
+Now you can run meteor directly from the checkout 
 
     ./meteor --help
 
